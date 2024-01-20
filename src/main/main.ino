@@ -1,3 +1,11 @@
+/* ---------- Temperature control system v1.1 ----------
+
+v1.1 - 01/20/24 - Serial response value changed from float to int
+Bug fixed in PID
+
+*/
+
+
 #include <SPI.h>                //SPI Protocol for MAX31855 connection
 #include <Wire.h>               // I2C protocol for OLED connection
 #include "Adafruit_MAX31855.h"  //For MAX31855 connection
@@ -42,9 +50,11 @@ int MAX_CS[numControlUnits] = { 22, 23, 24, 25 };
 
 int eepromAddress[9] = { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
 
-float tempArray[numControlUnits];
+int tempArrayInt[numControlUnits];
+//float tempArrayInt[numControlUnits];
 float tempArray_p[numControlUnits];
 float setTempArray[4];
+int setTempArrayInt[4];
 bool heaterState = 0;
 bool heatSFT = 0;
 
@@ -134,26 +144,28 @@ void loop() {
   }
 
   for (int i = 0; i < numControlUnits; i++) {
-    tempArray[i] = sensor[i]->readCelsius();
+    temp[i] = sensor[i]->readCelsius();
+    tempArrayInt[i] = int(temp[i]);
   }
 
-  for (int i = 0; i < numControlUnits; i++) {
-    if (sensor[i]->readError()) {
-      senseError[i] = true;
-    } else {
-      senseError[i] = false;
-      pidControl[i]->Compute();
-    }
 
-    if (!senseError[i]) {
-      if (tempArray[i] != tempArray_p[i]) {
-        tempArray_p[i] = tempArray[i];
-      }
+for (int i = 0; i < numControlUnits; i++) {
+  if (sensor[i]->readError()) {
+    senseError[i] = true;
+  } else {
+    senseError[i] = false;
+    pidControl[i]->Compute();
+  }
+
+  if (!senseError[i]) {
+    if (temp[i] != tempArray_p[i]) {
+      tempArray_p[i] = temp[i];
     }
   }
-  displayWriteData(1);
-  tempControl();
-  delay(250);
+}
+displayWriteData(1);
+tempControl();
+delay(250);
 }
 
 float floatOutErr[numControlUnits];
@@ -168,7 +180,7 @@ void tempControl() {
   for (int i = 0; i < numControlUnits; i++) {
     floatOutErr[i] = static_cast<float>(OutErr[i]);
     absOutErr[i] = fabs(floatOutErr[i]);
-    coolOrHeat[i] = (tempArray[i] > Set[i]) ? 1 : 0;
+    coolOrHeat[i] = (temp[i] > Set[i]) ? 1 : 0;
     coolOrHeatPower[i] = map(absOutErr[i], pidMinValue[i], pidMaxValue[i], coolOrHeatPowerMin[i], coolOrHeatPowerMax[i]);
 
     if (coolOrHeat[0] == 1) {
@@ -194,17 +206,17 @@ void tempControl() {
 
     MCP2.setVoltage(coolOrHeatPower[2]);
     if (coolOrHeat[2] == 1) {
-        digitalWrite(PELTIER_PIN, HIGH);
-      } else {
-        digitalWrite(PELTIER_PIN, LOW);
-      }
+      digitalWrite(PELTIER_PIN, HIGH);
+    } else {
+      digitalWrite(PELTIER_PIN, LOW);
+    }
 
     MCP3.setVoltage(coolOrHeatPower[3]);
-        if (coolOrHeat[2] == 1) {
-        digitalWrite(AMBIENT_PIN, HIGH);
-      } else {
-        digitalWrite(AMBIENT_PIN, LOW);
-      }
+    if (coolOrHeat[2] == 1) {
+      digitalWrite(AMBIENT_PIN, HIGH);
+    } else {
+      digitalWrite(AMBIENT_PIN, LOW);
+    }
   }
 }
 

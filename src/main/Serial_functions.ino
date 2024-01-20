@@ -7,26 +7,26 @@ void serialSend(int type) {
     Serial.print(heaterState);
     Serial.print(",");
     Serial.print("(0,0,0,0),");
-    Serial.print(setTempArray[0]);
+    Serial.print(setTempArrayInt[0]);
     Serial.print(",");
-    Serial.print(temp[0]);
+    Serial.print(tempArrayInt[0]);
     Serial.print(",");
     if (coolerPower) {
-      Serial.print(setTempArray[1]);
+      Serial.print(setTempArrayInt[1]);
       Serial.print(",");
     } else {
       Serial.print("00");
       Serial.print(",");
     }
-    Serial.print(temp[1]);
+    Serial.print(tempArrayInt[1]);
     Serial.print(",");
-    Serial.print(setTempArray[2]);
+    Serial.print(setTempArrayInt[2]);
     Serial.print(",");
-    Serial.print(temp[2]);
+    Serial.print(tempArrayInt[2]);
     Serial.print(",");
-    Serial.print(setTempArray[3]);
+    Serial.print(setTempArrayInt[3]);
     Serial.print(",");
-    Serial.println(temp[3]);
+    Serial.println(tempArrayInt[3]);
     digitalWrite(TX_ON_PIN, LOW);
   }
   if (type == 2) {

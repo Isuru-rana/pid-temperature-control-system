@@ -33,8 +33,8 @@ void displayWriteData(int type) {
       }
     }
     for (int i = 0; i < numControlUnits; i++) {
-      display.setCursor(floatAlignRight(type, tempArray[i]), displayVPos[i]);
-      display.print(tempArray[i]);
+      display.setCursor(floatAlignRight(type, temp[i]), displayVPos[i]);
+      display.print(temp[i]);
     }
   } else if (type == 0) {
     int clearX = 71;

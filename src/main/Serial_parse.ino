@@ -26,6 +26,9 @@ void parseCommand(String command) {
         setTempArray[2] = pIndex > 0 ? command.substring(pIndex, aIndex > 0 ? aIndex : rIndex).toInt() : setTempArray[2];
         setTempArray[3] = aIndex > 0 ? command.substring(aIndex, rIndex).toInt() : setTempArray[3];
 
+        for (int i = 0; i < numControlUnits; i++) {
+          setTempArrayInt[i] = int(setTempArray[i]);
+        }
         WriteEEPROM();
         displayWriteData(0);
         serialSend(1);
