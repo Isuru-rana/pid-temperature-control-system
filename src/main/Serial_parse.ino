@@ -36,7 +36,8 @@ void parseCommand(String command) {
       } else if (jIndex > 0 && rIndex > 0) {
         char jVal = command.charAt(jIndex);
         if (jVal == '1') {
-          serialSend(2);
+          if (!systemPower) serialSend(2);
+          else systemPower = false;
         } else if (jVal == '5') {
           serialTimer = millis();
           systemPower = true;

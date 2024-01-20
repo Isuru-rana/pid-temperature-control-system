@@ -30,6 +30,7 @@ void serialSend(int type) {
     digitalWrite(TX_ON_PIN, LOW);
   }
   if (type == 2) {
+    
     digitalWrite(TX_ON_PIN, HIGH);
     Serial.print("~");
     Serial.print(device_address);

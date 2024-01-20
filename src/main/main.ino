@@ -1,17 +1,22 @@
-/* ---------- Temperature control system v1.1.1 ----------
+/* ---------- Temperature Control System v1.1.3 ------------
 
 v1.1 - 01/20/24 - Serial response value changed from float to int
-                  Bug fixed in PID
-v1.1.1 - 01/20/24 - Added Power Off state to the system
-                    All the temperature setpoints cleard
-                    All I/O pins are turned off
-                    Set point values are removed form EEPROM
-                    Heater Cooler pin removed
-v1.1.2 - 01/20/24 - Changed serial response heater state error
-                    Changed the heater temp to int and added +200
-                    Added timer for heater timer for 5s
+                  Bug fixed in PID.
+
+v1.1.1 - 01/20/24 - Added Power Off state to the system.
+                    All temperature setpoints cleared.
+                    All I/O pins are turned off.
+                    Setpoint values are removed from EEPROM.
+                    Heater Cooler pin removed.
+
+v1.1.2 - 01/20/24 - Changed serial response heater state error.
+                    Changed the heater temp to int and added +200.
+                    Added timer for heater for 5s.
+
+v1.1.3 - 01/21/24 - Bug fix on EEPROM.
 
 */
+
 
 
 #include <SPI.h>                //SPI Protocol for MAX31855 connection
@@ -22,19 +27,21 @@ v1.1.2 - 01/20/24 - Changed serial response heater state error
 #include <EEPROM.h>
 #include "MCP4725.h"
 
-int device_address = 5;
 
+int device_address = 5;
 #define numControlUnits 4
+
 
 //===== Pins=======
 #define TIMER_ON_LED_PIN 27  //N  //  Fan pin will change it later
 #define POWER_ON_PIN 28      //  /5J001R
 #define HEATER_Heat_PIN 29   //  /J101 Heater Power on pin  /5J101R
 #define HEATER_PWM_PIN 2
-#define COOLER_PIN 31
-#define COOLER_PWM_PIN 5
+#define COOLER_PIN 31        // note: Cooler is controlled by MPC1 (0x60)
 #define PELTIER_PIN 32
 #define AMBIENT_PIN 33
+
+int MAX_CS[numControlUnits] = { 22, 23, 24, 25 };  // MAX31855 module pins
 
 #define heaterTimeout 5000
 #define serialTimeout 2000
@@ -47,6 +54,7 @@ int device_address = 5;
 #define TX_ON_PIN 49
 #define ANALOG_PIN A0
 
+//#define COOLER_PWM_PIN 5
 //#define HEATER_Cool_PIN 30
 //#define AMBIENT_PWM_PIN 5  //N
 //#define COOLER_PWM_PIN 3  //N
@@ -66,11 +74,9 @@ bool heatSafeT = 0;
 #define SCREEN_ADDRESS 0x3C
 int displayVPos[numControlUnits] = { 10, 25, 40, 55 };
 
-int MAX_CS[numControlUnits] = { 22, 23, 24, 25 };
-int eepromAddress[9] = { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
 
+int eepromAddress[9] = { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
 int tempArrayInt[numControlUnits];
-//float tempArrayInt[numControlUnits];
 float tempArray_p[numControlUnits];
 float setTempArray[4];
 int setTempArrayInt[4];
@@ -102,14 +108,13 @@ void initControles();
 MCP4725 MCP1(0x60);  //ADDR open
 MCP4725 MCP2(0x61);  //ADDR to GND
 //MCP4725 MCP3(0x60);  //ADDR to Vcc
+float mcpMaxVoltage[3] = { 5.1, 5.1, 5.1 };
 
 uint8_t selectPin[4] = { 50, 51, 52, 53 };
 
 void ReadEEPROM();
 void parseCommand(String command);
 void serialSync();
-
-float mcpMaxVoltage[3] = { 5.1, 5.1, 5.1 };
 
 
 
@@ -174,7 +179,6 @@ void loop() {
     Set[i] = setTempArray[i];
   }
 
-
   for (int i = 0; i < numControlUnits; i++) {
     if (sensor[i]->readError()) {
       senseError[i] = true;
@@ -196,6 +200,7 @@ void loop() {
   delay(250);
 }
 
+
 float floatOutErr[numControlUnits];
 float absOutErr[numControlUnits];
 bool coolOrHeat[numControlUnits];  // 1 == cool; 0 == heat
@@ -214,9 +219,7 @@ void tempControl() {
     if (systemPower) {
       if (coolOrHeat[0] == 1 && heaterState) {
         digitalWrite(HEATER_Heat_PIN, HIGH);
-        //heaterState = 1;
       } else digitalWrite(HEATER_Heat_PIN, LOW);
-      //heaterState = 0;
       if (heaterState) analogWrite(HEATER_PWM_PIN, coolOrHeatPower[0]);
       else analogWrite(HEATER_PWM_PIN, 0);
 
@@ -227,6 +230,7 @@ void tempControl() {
           digitalWrite(COOLER_PIN, LOW);
         }
         MCP1.setVoltage(coolOrHeatPower[1]);
+
       } else {
         MCP1.setVoltage(0);
         digitalWrite(COOLER_PIN, LOW);
@@ -246,12 +250,13 @@ void tempControl() {
         digitalWrite(AMBIENT_PIN, LOW);
       }
     } else {
-      digitalWrite(POWER_ON_PIN, LOW);
       digitalWrite(HEATER_PWM_PIN, LOW);
       digitalWrite(HEATER_Heat_PIN, LOW);
       digitalWrite(COOLER_PIN, LOW);
       digitalWrite(PELTIER_PIN, LOW);
       digitalWrite(AMBIENT_PIN, LOW);
+      MCP1.setVoltage(0);
+      MCP2.setVoltage(0);
     }
   }
 }
