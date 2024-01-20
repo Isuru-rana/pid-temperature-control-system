@@ -269,7 +269,6 @@ void initControles() {
 }
 
 void serialSync() {
-  Serial.println("came");
   systemPower = false;
   digitalWrite(POWER_ON_PIN, systemPower);
   heaterState = 0;

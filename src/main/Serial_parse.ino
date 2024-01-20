@@ -34,7 +34,9 @@ void parseCommand(String command) {
         serialSend(1);
 
       } else if (jIndex > 0 && rIndex > 0) {
+
         char jVal = command.charAt(jIndex);
+        
         if (jVal == '1') {
           if (!systemPower) serialSend(2);
           else systemPower = false;
@@ -47,6 +49,7 @@ void parseCommand(String command) {
         }
       }
     } else if (wIndex > 0 && rIndex > 0 && !iIndex) {
+
       if (command.substring(wIndex + 1, rIndex).equals("?")) {
         serialSend(4);
       } else {
@@ -55,6 +58,7 @@ void parseCommand(String command) {
         serialSend(5);
       }
     } else if (iIndex > 0 && rIndex > 0 && !wIndex) {
+
       if (command.substring(iIndex + 1, rIndex).equals("1")) {
         heatSafeT = 1;
         EEPROM.put(eepromAddress[7] * sizeof(bool), heatSafeT);
@@ -63,7 +67,6 @@ void parseCommand(String command) {
       } else if (command.substring(iIndex + 1, rIndex).equals("0")) {
         heatSafeT = 0;
         EEPROM.put(eepromAddress[7] * sizeof(bool), heatSafeT);
-        Serial.print("herea");
         serialSend(6);
       }
     }
