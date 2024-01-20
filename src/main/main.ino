@@ -2,12 +2,14 @@
 
 v1.1 - 01/20/24 - Serial response value changed from float to int
                   Bug fixed in PID
-v1.1.1 - 01/20/24 - Added Timer Interrupt for keep sync with serial connection
-                    Added Power Off state to the system.
-                        All the temperature setpoints cleard
-                        all I/O pins are turned off
+v1.1.1 - 01/20/24 - Added Power Off state to the system
+                    All the temperature setpoints cleard
+                    All I/O pins are turned off
                     Set point values are removed form EEPROM
                     Heater Cooler pin removed
+v1.1.2 - 01/20/24 - Changed serial response heater state error
+                    Changed the heater temp to int and added +200
+                    Added timer for heater timer for 5s
 
 */
 
@@ -19,9 +21,8 @@ v1.1.1 - 01/20/24 - Added Timer Interrupt for keep sync with serial connection
 #include <PID_v1.h>
 #include <EEPROM.h>
 #include "MCP4725.h"
-#include <TimerOne.h>
 
-int device_address = 0;
+int device_address = 5;
 
 #define numControlUnits 4
 
@@ -31,9 +32,12 @@ int device_address = 0;
 #define HEATER_Heat_PIN 29   //  /J101 Heater Power on pin  /5J101R
 #define HEATER_PWM_PIN 2
 #define COOLER_PIN 31
+#define COOLER_PWM_PIN 5
 #define PELTIER_PIN 32
 #define AMBIENT_PIN 33
 
+#define heaterTimeout 5000
+#define serialTimeout 2000
 
 #define servopinno0 6  //N
 #define servopinno1 7  //N
@@ -51,6 +55,9 @@ int device_address = 0;
 // ====== System Flags =======
 bool systemPower = false;
 bool coolerPower = true;
+bool heaterState = 0;
+bool heaterPower = 0;
+bool heatSafeT = 0;
 
 //===OLED Display setup====
 #define SCREEN_WIDTH 128
@@ -60,7 +67,6 @@ bool coolerPower = true;
 int displayVPos[numControlUnits] = { 10, 25, 40, 55 };
 
 int MAX_CS[numControlUnits] = { 22, 23, 24, 25 };
-
 int eepromAddress[9] = { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
 
 int tempArrayInt[numControlUnits];
@@ -68,10 +74,11 @@ int tempArrayInt[numControlUnits];
 float tempArray_p[numControlUnits];
 float setTempArray[4];
 int setTempArrayInt[4];
-bool heaterState = 0;
-bool heatSFT = 0;
+
 
 int jValue = 1;
+unsigned long heaterTimer;
+unsigned long serialTimer;
 
 //==== PID config ======
 
@@ -92,9 +99,9 @@ Adafruit_MAX31855 *sensor[numControlUnits];
 Adafruit_SH1106 display(OLED_RESET);
 void initControles();
 
-MCP4725 MCP1(0x62);  //ADDR open
-MCP4725 MCP2(0x63);  //ADDR to Vcc
-MCP4725 MCP3(0x60);  //ADDR to GND
+MCP4725 MCP1(0x60);  //ADDR open
+MCP4725 MCP2(0x61);  //ADDR to GND
+//MCP4725 MCP3(0x60);  //ADDR to Vcc
 
 uint8_t selectPin[4] = { 50, 51, 52, 53 };
 
@@ -104,11 +111,10 @@ void serialSync();
 
 float mcpMaxVoltage[3] = { 5.1, 5.1, 5.1 };
 
+
+
 void setup() {
   Serial.begin(9600);
-  Timer1.initialize(2000000);
-  Timer1.attachInterrupt(serialSync);
-  Timer1.stop();
   initControles();
   display.begin(SH1106_SWITCHCAPVCC, SCREEN_ADDRESS);
   display.clearDisplay();
@@ -127,10 +133,10 @@ void setup() {
   Wire.begin();
   MCP1.begin();
   MCP2.begin();
-  MCP3.begin();
+  //MCP3.begin();
   MCP1.setMaxVoltage(mcpMaxVoltage[0]);
   MCP2.setMaxVoltage(mcpMaxVoltage[1]);
-  MCP3.setMaxVoltage(mcpMaxVoltage[2]);
+  //MCP3.setMaxVoltage(mcpMaxVoltage[2]);
 
   pinMode(POWER_ON_PIN, OUTPUT);
   pinMode(HEATER_PWM_PIN, OUTPUT);
@@ -142,9 +148,13 @@ void setup() {
 
 bool senseError[numControlUnits];
 
-
-
 void loop() {
+  if ((millis() - heaterTimer > heaterTimeout) && heatSafeT) {
+    heaterTimer = 0;
+    heaterState = 0;
+  } else heaterState = 1;
+
+  if ((millis() - serialTimer > serialTimeout) && systemPower) serialSync();
 
   static String receivedCommand = "";
 
@@ -161,6 +171,7 @@ void loop() {
   for (int i = 0; i < numControlUnits; i++) {
     temp[i] = sensor[i]->readCelsius();
     tempArrayInt[i] = int(temp[i]);
+    Set[i] = setTempArray[i];
   }
 
 
@@ -178,6 +189,8 @@ void loop() {
       }
     }
   }
+  temp[0] += 200;
+  tempArrayInt[0] += 200;
   displayWriteData(1);
   tempControl();
   delay(250);
@@ -195,15 +208,15 @@ void tempControl() {
   for (int i = 0; i < numControlUnits; i++) {
     floatOutErr[i] = static_cast<float>(OutErr[i]);
     absOutErr[i] = fabs(floatOutErr[i]);
-    coolOrHeat[i] = (temp[i] > Set[i]) ? 1 : 0;
+    coolOrHeat[i] = (temp[i] > Set[i]) ? 0 : 1;
     coolOrHeatPower[i] = map(absOutErr[i], pidMinValue[i], pidMaxValue[i], coolOrHeatPowerMin[i], coolOrHeatPowerMax[i]);
 
     if (systemPower) {
-      if (heaterState && coolOrHeat[0] == 1) {
+      if (coolOrHeat[0] == 1 && heaterState) {
         digitalWrite(HEATER_Heat_PIN, HIGH);
-      } else {
-        digitalWrite(HEATER_Heat_PIN, LOW);
-      }
+        //heaterState = 1;
+      } else digitalWrite(HEATER_Heat_PIN, LOW);
+      //heaterState = 0;
       if (heaterState) analogWrite(HEATER_PWM_PIN, coolOrHeatPower[0]);
       else analogWrite(HEATER_PWM_PIN, 0);
 
@@ -226,8 +239,8 @@ void tempControl() {
         digitalWrite(PELTIER_PIN, LOW);
       }
 
-      MCP3.setVoltage(coolOrHeatPower[3]);
-      if (coolOrHeat[2] == 1) {
+      //MCP3.setVoltage(coolOrHeatPower[3]);
+      if (coolOrHeat[3] == 1) {
         digitalWrite(AMBIENT_PIN, HIGH);
       } else {
         digitalWrite(AMBIENT_PIN, LOW);
@@ -251,9 +264,13 @@ void initControles() {
 }
 
 void serialSync() {
-  systemPower == false;
+  Serial.println("came");
+  systemPower = false;
+  digitalWrite(POWER_ON_PIN, systemPower);
+  heaterState = 0;
   for (int i = 0; i < 4; i++) {
     setTempArray[i] = 0;
     setTempArrayInt[i] = 0;
   }
+  displayWriteData(0);
 }

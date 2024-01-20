@@ -22,7 +22,7 @@ void parseCommand(String command) {
           coolerPower = true;
           setTempArray[1] = cIndex > 0 ? command.substring(cIndex, (pIndex > 0 ? pIndex : aIndex) > 0 ? (pIndex > 0 ? pIndex : aIndex) : rIndex).toInt() : setTempArray[1];
         }
-        setTempArray[0] = hIndex > 0 ? command.substring(hIndex, (cIndex > 0 ? cIndex : (pIndex > 0 ? pIndex : (aIndex > 0 ? aIndex : rIndex)))).toInt() +200: setTempArray[0];
+        setTempArray[0] = hIndex > 0 ? command.substring(hIndex, (cIndex > 0 ? cIndex : (pIndex > 0 ? pIndex : (aIndex > 0 ? aIndex : rIndex)))).toInt() : setTempArray[0];
         setTempArray[2] = pIndex > 0 ? command.substring(pIndex, aIndex > 0 ? aIndex : rIndex).toInt() : setTempArray[2];
         setTempArray[3] = aIndex > 0 ? command.substring(aIndex, rIndex).toInt() : setTempArray[3];
 
@@ -38,10 +38,10 @@ void parseCommand(String command) {
         if (jVal == '1') {
           serialSend(2);
         } else if (jVal == '5') {
-          if (!systemPower) Timer1.start();
-          else Timer1.restart();
-          digitalWrite(POWER_ON_PIN, HIGH);
+          serialTimer = millis();
           systemPower = true;
+          digitalWrite(POWER_ON_PIN, systemPower);
+
           serialSend(3);
         }
       }
@@ -54,10 +54,15 @@ void parseCommand(String command) {
         serialSend(5);
       }
     } else if (iIndex > 0 && rIndex > 0 && !wIndex) {
-      if (command.substring(iIndex + 1, rIndex).equals("1") || command.substring(iIndex + 1, rIndex).equals("0")) {
-        heatSFT = command.substring(iIndex + 1, rIndex).toInt();
-        heaterState = 1;
-        EEPROM.put(eepromAddress[7] * sizeof(bool), heatSFT);
+      if (command.substring(iIndex + 1, rIndex).equals("1")) {
+        heatSafeT = 1;
+        EEPROM.put(eepromAddress[7] * sizeof(bool), heatSafeT);
+        heaterTimer = millis();
+        serialSend(6);
+      } else if (command.substring(iIndex + 1, rIndex).equals("0")) {
+        heatSafeT = 0;
+        EEPROM.put(eepromAddress[7] * sizeof(bool), heatSafeT);
+        Serial.print("herea");
         serialSend(6);
       }
     }

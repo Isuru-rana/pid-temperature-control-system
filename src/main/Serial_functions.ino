@@ -60,7 +60,7 @@ void serialSend(int type) {
   if (type == 6) {
     digitalWrite(TX_ON_PIN, HIGH);
     Serial.print("~I");
-    Serial.print(heatSFT);
+    Serial.print(heatSafeT);
     Serial.println("R");
     digitalWrite(TX_ON_PIN, LOW);
   }

@@ -6,7 +6,7 @@ void displayInit() {
   display.print("Temperature");
   display.setCursor(90, 0);
   display.print("Set");
-  display.drawLine(70, 0, 70, SCREEN_HEIGHT, WHITE);
+  display.drawLine(70, 10, 70, SCREEN_HEIGHT, WHITE);
   display.setCursor(5, 10);
   display.print("H:");
   display.setCursor(5, 25);
@@ -34,7 +34,12 @@ void displayWriteData(int type) {
     }
     for (int i = 0; i < numControlUnits; i++) {
       display.setCursor(floatAlignRight(type, temp[i]), displayVPos[i]);
-      display.print(temp[i]);
+      if (i == 0) {
+        display.setCursor(floatAlignRight(type, temp[i])+15, displayVPos[i]);
+        display.print(tempArrayInt[i]);
+      } else {
+        display.print(temp[i]);
+      }
     }
   } else if (type == 0) {
     int clearX = 71;
@@ -49,7 +54,12 @@ void displayWriteData(int type) {
     }
     for (int i = 0; i < numControlUnits; i++) {
       display.setCursor(floatAlignRight(type, setTempArray[i]), displayVPos[i]);
-      display.print(setTempArray[i]);
+      if (i == 0) {
+        display.setCursor(floatAlignRight(type, setTempArray[i])+15, displayVPos[i]);
+        display.print(setTempArrayInt[i]);
+      } else {
+        display.print(setTempArray[i]);
+      }
     }
   }
   display.display();
