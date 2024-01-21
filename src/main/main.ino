@@ -251,6 +251,7 @@ void tempControl() {
         digitalWrite(AMBIENT_PIN, LOW);
       }
     } else {
+      digitalWrite(POWER_ON_PIN, systemPower);
       digitalWrite(HEATER_PWM_PIN, LOW);
       digitalWrite(HEATER_Heat_PIN, LOW);
       digitalWrite(COOLER_PIN, LOW);

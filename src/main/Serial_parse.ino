@@ -39,7 +39,7 @@ void parseCommand(String command) {
         
         if (jVal == '1') {
           if (!systemPower) serialSend(2);
-          else systemPower = false;
+          else systemPower = false; serialSend(2);
         } else if (jVal == '5') {
           serialTimer = millis();
           systemPower = true;
