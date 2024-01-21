@@ -1,4 +1,4 @@
-/* ---------- Temperature Control System v1.2.0 ------------
+/* ---------- Temperature Control System v1.2.1 ------------
 
 v1.1 - 01/20/24 - Serial response value changed from float to int
                   Bug fixed in PID.
@@ -17,7 +17,7 @@ v1.1.3 - 01/21/24 - Bug fix on EEPROM.
 
 v1.1.5            - Bug fix
 
-v1.2.0            - Serial communication protocol changed.
+v1.2.0 + 1.2.1    - Serial communication protocol changed.
                     Bugs fixed on serial and PID loops
 */
 

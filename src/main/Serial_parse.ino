@@ -57,9 +57,12 @@ void parseCommand(String command) {
           if (!systemPower) {
             serialSend(2);
             serialConState = true;
-          } else {systemPower = false;
+          } else {
+            systemPower = false;
           serialSend(2);
-          serialConState = false;}
+          serialConState = false;
+          serialSync();
+          }
         } else if (serialConState && jVal == '5') {
           serialTimer = millis();
           systemPower = true;
