@@ -1,4 +1,4 @@
-/* ---------- Temperature Control System v1.1.5 ------------
+/* ---------- Temperature Control System v1.2.0 ------------
 
 v1.1 - 01/20/24 - Serial response value changed from float to int
                   Bug fixed in PID.
@@ -16,6 +16,9 @@ v1.1.2 - 01/20/24 - Changed serial response heater state error.
 v1.1.3 - 01/21/24 - Bug fix on EEPROM.
 
 v1.1.5            - Bug fix
+
+v1.2.0            - Serial communication protocol changed.
+                    Bugs fixed on serial and PID loops
 */
 
 
@@ -38,7 +41,7 @@ int device_address = 5;
 #define POWER_ON_PIN 28      //  /5J001R
 #define HEATER_Heat_PIN 29   //  /J101 Heater Power on pin  /5J101R
 #define HEATER_PWM_PIN 2
-#define COOLER_PIN 31        // note: Cooler is controlled by MPC1 (0x60)
+#define COOLER_PIN 31  // note: Cooler is controlled by MPC1 (0x60)
 #define PELTIER_PIN 32
 #define AMBIENT_PIN 33
 
@@ -63,10 +66,14 @@ int MAX_CS[numControlUnits] = { 22, 23, 24, 25 };  // MAX31855 module pins
 
 // ====== System Flags =======
 bool systemPower = false;
+bool serialConState = false;
 bool coolerPower = true;
-bool heaterState = 0;
 bool heaterPower = 0;
+
 bool heatSafeT = 0;
+
+bool peltierPower = false;
+bool ambientPower = false;
 
 //===OLED Display setup====
 #define SCREEN_WIDTH 128
@@ -157,8 +164,8 @@ bool senseError[numControlUnits];
 void loop() {
   if ((millis() - heaterTimer > heaterTimeout) && heatSafeT) {
     heaterTimer = 0;
-    heaterState = 0;
-  } else heaterState = 1;
+    heaterPower = 0;
+  } else if (heatSafeT) heaterPower = 1;
 
   //if ((millis() - serialTimer > serialTimeout) && systemPower) serialSync();
 
@@ -218,11 +225,18 @@ void tempControl() {
     coolOrHeatPower[i] = map(absOutErr[i], pidMinValue[i], pidMaxValue[i], coolOrHeatPowerMin[i], coolOrHeatPowerMax[i]);
 
     if (systemPower) {
-      if (coolOrHeat[0] == 1 && heaterState) {
-        digitalWrite(HEATER_Heat_PIN, HIGH);
-      } else digitalWrite(HEATER_Heat_PIN, LOW);
-      if (heaterState) analogWrite(HEATER_PWM_PIN, coolOrHeatPower[0]);
-      else analogWrite(HEATER_PWM_PIN, 0);
+      if (heaterPower) {
+        if (coolOrHeat[0] == 1) {
+          digitalWrite(HEATER_Heat_PIN, HIGH);
+          analogWrite(HEATER_PWM_PIN, coolOrHeatPower[0]);
+        } else {
+          digitalWrite(HEATER_Heat_PIN, LOW);
+          analogWrite(HEATER_PWM_PIN, 0);
+        }
+      } else {
+        analogWrite(HEATER_PWM_PIN, 0);
+        digitalWrite(HEATER_Heat_PIN, LOW);
+      }
 
       if (coolerPower) {
         if (coolOrHeat[1] == 1) {
@@ -237,16 +251,25 @@ void tempControl() {
         digitalWrite(COOLER_PIN, LOW);
       }
 
-      MCP2.setVoltage(coolOrHeatPower[2]);
-      if (coolOrHeat[2] == 1) {
-        digitalWrite(PELTIER_PIN, HIGH);
+      if (peltierPower) {
+        MCP2.setVoltage(coolOrHeatPower[2]);
+        if (coolOrHeat[2] == 1) {
+          digitalWrite(PELTIER_PIN, HIGH);
+        } else {
+          digitalWrite(PELTIER_PIN, LOW);
+        }
       } else {
+        MCP2.setVoltage(0);
         digitalWrite(PELTIER_PIN, LOW);
       }
 
-      //MCP3.setVoltage(coolOrHeatPower[3]);
-      if (coolOrHeat[3] == 1) {
-        digitalWrite(AMBIENT_PIN, HIGH);
+      if (ambientPower) {
+        //MCP3.setVoltage(coolOrHeatPower[3]);
+        if (coolOrHeat[3] == 1) {
+          digitalWrite(AMBIENT_PIN, HIGH);
+        } else {
+          digitalWrite(AMBIENT_PIN, LOW);
+        }
       } else {
         digitalWrite(AMBIENT_PIN, LOW);
       }
@@ -273,7 +296,7 @@ void initControles() {
 void serialSync() {
   systemPower = false;
   digitalWrite(POWER_ON_PIN, systemPower);
-  heaterState = 0;
+  heaterPower = 0;
   for (int i = 0; i < 4; i++) {
     setTempArray[i] = 0;
     setTempArrayInt[i] = 0;

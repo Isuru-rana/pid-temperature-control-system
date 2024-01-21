@@ -16,15 +16,31 @@ void parseCommand(String command) {
 
       if ((systemPower) && (hIndex || cIndex || pIndex || aIndex)) {
         String cBuff = command.substring(cIndex, cIndex + 2);
-        if (cBuff == ("00")) {
-          coolerPower = false;
-        } else {
+        String hBuff = command.substring(hIndex, hIndex + 2);
+        String pBuff = command.substring(pIndex, pIndex + 2);
+        String aBuff = command.substring(aIndex, aIndex + 2);
+
+        if (cBuff == ("00")) coolerPower = false;
+        else {
           coolerPower = true;
           setTempArray[1] = cIndex > 0 ? command.substring(cIndex, (pIndex > 0 ? pIndex : aIndex) > 0 ? (pIndex > 0 ? pIndex : aIndex) : rIndex).toInt() : setTempArray[1];
         }
-        setTempArray[0] = hIndex > 0 ? command.substring(hIndex, (cIndex > 0 ? cIndex : (pIndex > 0 ? pIndex : (aIndex > 0 ? aIndex : rIndex)))).toInt() : setTempArray[0];
-        setTempArray[2] = pIndex > 0 ? command.substring(pIndex, aIndex > 0 ? aIndex : rIndex).toInt() : setTempArray[2];
-        setTempArray[3] = aIndex > 0 ? command.substring(aIndex, rIndex).toInt() : setTempArray[3];
+        if (hBuff == ("00")) heaterPower = false;
+        else {
+          heaterPower = true;
+          setTempArray[0] = hIndex > 0 ? command.substring(hIndex, (cIndex > 0 ? cIndex : (pIndex > 0 ? pIndex : (aIndex > 0 ? aIndex : rIndex)))).toInt() : setTempArray[0];
+        }
+        if (pBuff == ("00")) peltierPower = false;
+        else {
+          peltierPower = true;
+          setTempArray[2] = pIndex > 0 ? command.substring(pIndex, aIndex > 0 ? aIndex : rIndex).toInt() : setTempArray[2];
+        }
+        if (aBuff == ("00")) ambientPower = false;
+        else {
+          ambientPower = true;
+          setTempArray[3] = aIndex > 0 ? command.substring(aIndex, rIndex).toInt() : setTempArray[3];
+        }
+
 
         for (int i = 0; i < numControlUnits; i++) {
           setTempArrayInt[i] = int(setTempArray[i]);
@@ -36,11 +52,15 @@ void parseCommand(String command) {
       } else if (jIndex > 0 && rIndex > 0) {
 
         char jVal = command.charAt(jIndex);
-        
+
         if (jVal == '1') {
-          if (!systemPower) serialSend(2);
-          else systemPower = false; serialSend(2);
-        } else if (jVal == '5') {
+          if (!systemPower) {
+            serialSend(2);
+            serialConState = true;
+          } else {systemPower = false;
+          serialSend(2);
+          serialConState = false;}
+        } else if (serialConState && jVal == '5') {
           serialTimer = millis();
           systemPower = true;
           digitalWrite(POWER_ON_PIN, systemPower);
