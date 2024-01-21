@@ -57,7 +57,7 @@ void parseCommand(String command) {
         EEPROM.put(eepromAddress[1] * sizeof(int), device_address);
         serialSend(5);
       }
-    } else if (iIndex > 0 && rIndex > 0 && !wIndex) {
+    } else if ((iIndex > 0 && rIndex > 0 && !wIndex)&& systemPower) {
 
       if (command.substring(iIndex + 1, rIndex).equals("1")) {
         heatSafeT = 1;

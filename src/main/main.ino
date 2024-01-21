@@ -1,4 +1,4 @@
-/* ---------- Temperature Control System v1.1.3 ------------
+/* ---------- Temperature Control System v1.1.4 ------------
 
 v1.1 - 01/20/24 - Serial response value changed from float to int
                   Bug fixed in PID.
@@ -15,6 +15,7 @@ v1.1.2 - 01/20/24 - Changed serial response heater state error.
 
 v1.1.3 - 01/21/24 - Bug fix on EEPROM.
 
+v1.1.4            - Bug fix
 */
 
 
@@ -155,8 +156,8 @@ bool senseError[numControlUnits];
 
 void loop() {
   if ((millis() - heaterTimer > heaterTimeout) && heatSafeT) {
-    heaterTimer = 0;
-    heaterState = 0;
+    //heaterTimer = 0;
+    //heaterState = 0;
   } else heaterState = 1;
 
   if ((millis() - serialTimer > serialTimeout) && systemPower) serialSync();
@@ -193,8 +194,8 @@ void loop() {
       }
     }
   }
-  temp[0] += 200;
-  tempArrayInt[0] += 200;
+  //temp[0] += 200;
+  //tempArrayInt[0] += 200;
   displayWriteData(1);
   tempControl();
   delay(250);
