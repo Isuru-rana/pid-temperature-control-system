@@ -1,4 +1,4 @@
-/* ---------- Temperature Control System v1.2.2 ------------
+/* ---------- Temperature Control System v1.3.0 ------------
 
 v1.1 - 01/20/24 - Serial response value changed from float to int
                   Bug fixed in PID.
