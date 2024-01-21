@@ -2,8 +2,10 @@ void displayInit() {
   display.setTextSize(1);
   display.setTextColor(WHITE);
 
-  display.setCursor(0, 0);
-  display.print("Temperature");
+  display.setCursor(5, 0);
+  display.print("Address:");
+  display.setCursor(55, 0);
+  display.print(device_address);
   display.setCursor(90, 0);
   display.print("Set");
   display.drawLine(70, 10, 70, SCREEN_HEIGHT, WHITE);
@@ -35,7 +37,7 @@ void displayWriteData(int type) {
     for (int i = 0; i < numControlUnits; i++) {
       display.setCursor(floatAlignRight(type, temp[i]), displayVPos[i]);
       if (i == 0) {
-        display.setCursor(floatAlignRight(type, temp[i])+15, displayVPos[i]);
+        display.setCursor(floatAlignRight(type, temp[i]) + 15, displayVPos[i]);
         display.print(tempArrayInt[i]);
       } else {
         display.print(temp[i]);
@@ -55,8 +57,15 @@ void displayWriteData(int type) {
     for (int i = 0; i < numControlUnits; i++) {
       display.setCursor(floatAlignRight(type, setTempArray[i]), displayVPos[i]);
       if (i == 0) {
-        display.setCursor(floatAlignRight(type, setTempArray[i])+15, displayVPos[i]);
+        display.setCursor(floatAlignRight(type, setTempArray[i]) + 15, displayVPos[i]);
         display.print(setTempArrayInt[i]);
+      } else if (i == 1) {
+        if (!coolerPower) {
+          display.setCursor(100, displayVPos[i]);
+          display.print("OFF");
+        } else{
+          display.print(setTempArray[i]);
+        }
       } else {
         display.print(setTempArray[i]);
       }

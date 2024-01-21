@@ -20,23 +20,31 @@ void parseCommand(String command) {
         String pBuff = command.substring(pIndex, pIndex + 2);
         String aBuff = command.substring(aIndex, aIndex + 2);
 
-        if (cBuff == ("00")) coolerPower = false;
-        else {
+        if (cBuff == ("00")) {
+          coolerPower = false;
+          setTempArray[1] = 0;
+        }else {
           coolerPower = true;
           setTempArray[1] = cIndex > 0 ? command.substring(cIndex, (pIndex > 0 ? pIndex : aIndex) > 0 ? (pIndex > 0 ? pIndex : aIndex) : rIndex).toInt() : setTempArray[1];
         }
-        if (hBuff == ("00")) heaterPower = false;
-        else {
+        if (hBuff == ("00")) {
+          heaterPower = false;
+          setTempArray[0] = 0;
+        }else {
           heaterPower = true;
           setTempArray[0] = hIndex > 0 ? command.substring(hIndex, (cIndex > 0 ? cIndex : (pIndex > 0 ? pIndex : (aIndex > 0 ? aIndex : rIndex)))).toInt() : setTempArray[0];
         }
-        if (pBuff == ("00")) peltierPower = false;
-        else {
+        if (pBuff == ("00")) {
+          peltierPower = false;
+          setTempArray[2] = 0;
+        }else {
           peltierPower = true;
           setTempArray[2] = pIndex > 0 ? command.substring(pIndex, aIndex > 0 ? aIndex : rIndex).toInt() : setTempArray[2];
         }
-        if (aBuff == ("00")) ambientPower = false;
-        else {
+        if (aBuff == ("00")) {
+          ambientPower = false;
+          setTempArray[3] = 0;
+        }else {
           ambientPower = true;
           setTempArray[3] = aIndex > 0 ? command.substring(aIndex, rIndex).toInt() : setTempArray[3];
         }
