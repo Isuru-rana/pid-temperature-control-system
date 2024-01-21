@@ -5,6 +5,7 @@ void parseCommand(String command) {
     int wIndex = command.indexOf('W') + 1;
     int rIndex = command.indexOf('R');
     int iIndex = command.indexOf('I') + 1;
+    int lIndex = command.indexOf('L') + 1;
 
     if (systemAddress == device_address && !wIndex && !iIndex) {
       int hIndex = command.indexOf('H') + 1;
@@ -53,7 +54,7 @@ void parseCommand(String command) {
         for (int i = 0; i < numControlUnits; i++) {
           setTempArrayInt[i] = int(setTempArray[i]);
         }
-        //WriteEEPROM();
+
         displayWriteData(0);
         serialSend(1);
 
@@ -77,6 +78,16 @@ void parseCommand(String command) {
           digitalWrite(POWER_ON_PIN, systemPower);
 
           serialSend(3);
+        }
+      } else if (lIndex > 0 && rIndex > 0){
+        char lVal = command.charAt(lIndex);
+        if (isdigit(lVal)) {
+          int stateIndex = lVal - '0';
+          if (stateIndex >= 0 && stateIndex < 8) {
+            for (int i = 0; i < 3; i++) {
+              digitalWrite(servopinno[i], pinArray[stateIndex][i] ? HIGH : LOW);
+            }
+          }
         }
       }
     } else if (wIndex > 0 && rIndex > 0 && !iIndex) {

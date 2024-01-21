@@ -20,7 +20,10 @@ v1.1.5            - Bug fix
 v1.2.0 + 1.2.1    - Serial communication protocol changed.
                     Bugs fixed on serial and PID loops
 
-v1.2.2            - Code Improvements (Display)
+v1.2.2            - Code improvements (Display)
+
+v1.3.0            - Serial communication protocol changed 
+                      Added "L" parameter to switch servopin 0, 1, 2 
 */
 
 
@@ -52,10 +55,11 @@ int MAX_CS[numControlUnits] = { 22, 23, 24, 25 };  // MAX31855 module pins
 #define heaterTimeout 5000
 #define serialTimeout 2000
 
-#define servopinno0 6  //N
-#define servopinno1 7  //N
-#define servopinno2 8  //N
-#define servopinno3 9  //N
+#define servopinno0 6  
+#define servopinno1 7  
+#define servopinno2 8  
+int servopinno[3] = {servopinno0,servopinno1,servopinno2};
+//#define servopinno3 9  //N
 
 #define TX_ON_PIN 49
 #define ANALOG_PIN A0
@@ -86,6 +90,15 @@ int displayVPos[numControlUnits] = { 10, 25, 40, 55 };
 
 
 int eepromAddress[9] = { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
+bool pinArray[8][3] = { { 0, 0, 0 },
+                      { 0, 0, 1 },
+                      { 0, 1, 0 },
+                      { 0, 1, 1 },
+                      { 1, 0, 0 },
+                      { 1, 0, 1 },
+                      { 1, 1, 0 },
+                      { 1, 1, 1 }
+};
 int tempArrayInt[numControlUnits];
 float tempArray_p[numControlUnits];
 float setTempArray[4];
@@ -159,6 +172,9 @@ void setup() {
   pinMode(COOLER_PIN, OUTPUT);
   pinMode(PELTIER_PIN, OUTPUT);
   pinMode(AMBIENT_PIN, OUTPUT);
+  pinMode(servopinno0, OUTPUT);
+  pinMode(servopinno1, OUTPUT);
+  pinMode(servopinno2, OUTPUT);
 }
 
 bool senseError[numControlUnits];
@@ -241,7 +257,7 @@ void tempControl() {
       }
 
       if (coolerPower) {
-        if (coolOrHeat[1] == 1) {
+        if (coolOrHeat[1] == 0) {
           digitalWrite(COOLER_PIN, HIGH);
         } else {
           digitalWrite(COOLER_PIN, LOW);
@@ -255,7 +271,7 @@ void tempControl() {
 
       if (peltierPower) {
         MCP2.setVoltage(coolOrHeatPower[2]);
-        if (coolOrHeat[2] == 1) {
+        if (coolOrHeat[2] == 0) {
           digitalWrite(PELTIER_PIN, HIGH);
         } else {
           digitalWrite(PELTIER_PIN, LOW);
