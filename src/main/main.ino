@@ -24,6 +24,10 @@ v1.2.2            - Code improvements (Display)
 
 v1.3.0            - Serial communication protocol changed 
                       Added "L" parameter to switch servopin 0, 1, 2 
+
+v1.3.1            - Added another pin for L parameter.
+                    Added J2 pin
+                    Changed P00 to display as "OFF"
 */
 
 
@@ -55,20 +59,16 @@ int MAX_CS[numControlUnits] = { 22, 23, 24, 25 };  // MAX31855 module pins
 #define heaterTimeout 5000
 #define serialTimeout 2000
 
-#define servopinno0 6  
-#define servopinno1 7  
-#define servopinno2 8  
-int servopinno[3] = {servopinno0,servopinno1,servopinno2};
-//#define servopinno3 9  //N
+#define J2COMMAND_PIN 10
+#define servopinno0 6
+#define servopinno1 7
+#define servopinno2 8
+#define servopinno3 9
+int servopinno[4] = { servopinno0, servopinno1, servopinno2, servopinno3 };
+
 
 #define TX_ON_PIN 49
 #define ANALOG_PIN A0
-
-//#define COOLER_PWM_PIN 5
-//#define HEATER_Cool_PIN 30
-//#define AMBIENT_PWM_PIN 5  //N
-//#define COOLER_PWM_PIN 3  //N
-//#define PELTIER_PWM_PIN 4  //N
 
 // ====== System Flags =======
 bool systemPower = false;
@@ -81,6 +81,8 @@ bool heatSafeT = 0;
 bool peltierPower = false;
 bool ambientPower = false;
 
+bool J2 = false;
+
 //===OLED Display setup====
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
@@ -90,14 +92,23 @@ int displayVPos[numControlUnits] = { 10, 25, 40, 55 };
 
 
 int eepromAddress[9] = { 0, 1, 2, 3, 4, 5, 6, 7, 8 };
-bool pinArray[8][3] = { { 0, 0, 0 },
-                      { 0, 0, 1 },
-                      { 0, 1, 0 },
-                      { 0, 1, 1 },
-                      { 1, 0, 0 },
-                      { 1, 0, 1 },
-                      { 1, 1, 0 },
-                      { 1, 1, 1 }
+bool pinArray[16][4] = {
+  { 0, 0, 0, 0 },
+  { 0, 0, 0, 1 },
+  { 0, 0, 1, 0 },
+  { 0, 0, 1, 1 },
+  { 0, 1, 0, 0 },
+  { 0, 1, 0, 1 },
+  { 0, 1, 1, 0 },
+  { 0, 1, 1, 1 },
+  { 1, 0, 0, 0 },
+  { 1, 0, 0, 1 },
+  { 1, 0, 1, 0 },
+  { 1, 0, 1, 1 },
+  { 1, 1, 0, 0 },
+  { 1, 1, 0, 1 },
+  { 1, 1, 1, 0 },
+  { 1, 1, 1, 1 }
 };
 int tempArrayInt[numControlUnits];
 float tempArray_p[numControlUnits];
@@ -175,6 +186,8 @@ void setup() {
   pinMode(servopinno0, OUTPUT);
   pinMode(servopinno1, OUTPUT);
   pinMode(servopinno2, OUTPUT);
+  pinMode(J2COMMAND_PIN, OUTPUT);
+  
 }
 
 bool senseError[numControlUnits];

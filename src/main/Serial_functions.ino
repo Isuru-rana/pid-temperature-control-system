@@ -64,4 +64,14 @@ void serialSend(int type) {
     Serial.println("R");
     digitalWrite(TX_ON_PIN, LOW);
   }
+
+if (type == 7) {
+
+    digitalWrite(TX_ON_PIN, HIGH);
+    Serial.print("~");
+    Serial.print(device_address);
+    if (J2) Serial.println("J102");
+    else Serial.println("J002");
+    digitalWrite(TX_ON_PIN, LOW);
+  }
 }

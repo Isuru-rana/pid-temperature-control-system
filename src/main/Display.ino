@@ -63,7 +63,14 @@ void displayWriteData(int type) {
         if (!coolerPower) {
           display.setCursor(100, displayVPos[i]);
           display.print("OFF");
-        } else{
+        } else {
+          display.print(setTempArray[i]);
+        }
+      } else if (i == 2) {
+        if (!peltierPower) {
+          display.setCursor(100, displayVPos[i]);
+          display.print("OFF");
+        } else {
           display.print(setTempArray[i]);
         }
       } else {
