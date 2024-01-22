@@ -1,34 +1,40 @@
-/* ---------- Temperature Control System v1.3.0 ------------
+/* ---------- Temperature Control System v1.4.0 ------------
 
-v1.1 - 01/20/24 - Serial response value changed from float to int
-                  Bug fixed in PID.
+v1.1 - 01/20/24 - Changed the serial response value from float to int.
+                  Fixed a bug in the PID.
 
 v1.1.1 - 01/20/24 - Added Power Off state to the system.
-                    All temperature setpoints cleared.
-                    All I/O pins are turned off.
-                    Setpoint values are removed from EEPROM.
-                    Heater Cooler pin removed.
+                    Cleared all temperature setpoints.
+                    Turned off all I/O pins.
+                    Removed setpoint values from EEPROM.
+                    Removed Heater Cooler pin.
 
-v1.1.2 - 01/20/24 - Changed serial response heater state error.
-                    Changed the heater temp to int and added +200.
-                    Added timer for heater for 5s.
+v1.1.2 - 01/20/24 - Corrected serial response for heater state errors.
+                    Changed heater temperature to int and added +200.
+                    Added a 5-second timer for the heater.
 
-v1.1.3 - 01/21/24 - Bug fix on EEPROM.
+v1.1.3 - 01/21/24 - Fixed a bug related to EEPROM.
 
-v1.1.5            - Bug fix
+v1.1.5            - Fixed a bug.
 
-v1.2.0 + 1.2.1    - Serial communication protocol changed.
-                    Bugs fixed on serial and PID loops
+v1.2.0 + 1.2.1    - Changed the serial communication protocol.
+                      Fixed bugs in serial and PID loops.
 
-v1.2.2            - Code improvements (Display)
+v1.2.2            - Improved code (Display).
 
-v1.3.0            - Serial communication protocol changed 
-                      Added "L" parameter to switch servopin 0, 1, 2 
+v1.3.0 - 01/22/24 - Changed serial communication protocol.
+                      Added "L" parameter to switch servopin 0, 1, 2.
 
-v1.3.1            - Added another pin for L parameter.
-                    Added J2 pin
-                    Changed P00 to display as "OFF"
+v1.3.1            - Added another pin for the "L" parameter.
+                    Added J2 pin.
+                    Changed "P00" to display as "OFF."
+
+v1.4.0            - Changed serial communication protocol.
+                      Added "F" parameter to set voltages.
+                      Added "D" parameter for setting DC voltages.
+                      Minor bug fixes.
 */
+
 
 
 
@@ -82,6 +88,8 @@ bool peltierPower = false;
 bool ambientPower = false;
 
 bool J2 = false;
+float valveVoltage = 0;
+float dcMotorVoltage = 0;
 
 //===OLED Display setup====
 #define SCREEN_WIDTH 128
@@ -116,6 +124,7 @@ float setTempArray[4];
 int setTempArrayInt[4];
 
 
+char Lbuff[4];
 int jValue = 1;
 unsigned long heaterTimer;
 unsigned long serialTimer;
@@ -141,8 +150,9 @@ void initControles();
 
 MCP4725 MCP1(0x60);  //ADDR open
 MCP4725 MCP2(0x61);  //ADDR to GND
-//MCP4725 MCP3(0x60);  //ADDR to Vcc
-float mcpMaxVoltage[3] = { 5.1, 5.1, 5.1 };
+MCP4725 MCP3(0x64);  //Variable voltage out
+MCP4725 MCP4(0x65);  //DC moto controller
+float mcpMaxVoltage[4] = { 5.1, 5.1, 5.1, 5.1 };
 
 uint8_t selectPin[4] = { 50, 51, 52, 53 };
 
@@ -172,10 +182,12 @@ void setup() {
   Wire.begin();
   MCP1.begin();
   MCP2.begin();
-  //MCP3.begin();
+  MCP3.begin();
+  MCP4.begin();
   MCP1.setMaxVoltage(mcpMaxVoltage[0]);
   MCP2.setMaxVoltage(mcpMaxVoltage[1]);
-  //MCP3.setMaxVoltage(mcpMaxVoltage[2]);
+  MCP3.setMaxVoltage(mcpMaxVoltage[2]);
+  MCP4.setMaxVoltage(mcpMaxVoltage[3]);
 
   pinMode(POWER_ON_PIN, OUTPUT);
   pinMode(HEATER_PWM_PIN, OUTPUT);
@@ -187,7 +199,6 @@ void setup() {
   pinMode(servopinno1, OUTPUT);
   pinMode(servopinno2, OUTPUT);
   pinMode(J2COMMAND_PIN, OUTPUT);
-  
 }
 
 bool senseError[numControlUnits];
@@ -333,4 +344,11 @@ void serialSync() {
     setTempArrayInt[i] = 0;
   }
   displayWriteData(0);
+}
+float valveVoltage = 0;
+float dcMotorVoltage = 0;
+
+void setValveVoltage(int device) {
+  if (device == 1) MCP3.setVoltage(valveVoltage);
+  else if (device == 2) MCP3.setVoltage(dcMotorVoltage);
 }

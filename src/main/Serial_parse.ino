@@ -6,6 +6,8 @@ void parseCommand(String command) {
     int rIndex = command.indexOf('R');
     int iIndex = command.indexOf('I') + 1;
     int lIndex = command.indexOf('L') + 1;
+    int fIndex = command.indexOf('F') + 1;
+    int dIndex = command.indexOf('D') + 1;
 
     if (systemAddress == device_address && !wIndex && !iIndex) {
       int hIndex = command.indexOf('H') + 1;
@@ -72,7 +74,7 @@ void parseCommand(String command) {
             serialConState = false;
             serialSync();
           }
-        } else if (jVal == '2') {
+        } else if (systemPower && (jVal == '2')) {
           serialSend(7);
           if (!J2) {
             digitalWrite(J2COMMAND_PIN, HIGH);
@@ -88,16 +90,28 @@ void parseCommand(String command) {
 
           serialSend(3);
         }
-      } else if (lIndex > 0 && rIndex > 0) {
+      } else if (systemPower && (fIndex > 0 && rIndex > 0)) {
+        String fStr = command.substring(fIndex, rIndex);
+        valveVoltage = fStr.toInt() / 1000.0;
+        setValveVoltage(1);
+        serialSend(8);
+      } else if (systemPower && (dIndex > 0 && rIndex > 0)) {
+        String fStr = command.substring(dIndex, rIndex);
+        dcMotorVoltage = fStr.toInt() / 1000.0;
+        setValveVoltage(2);
+        serialSend(9);
+      }else if (systemPower && (lIndex > 0 && rIndex > 0)) {
         char lVal = command.charAt(lIndex);
         if (isdigit(lVal)) {
           int stateIndex = lVal - '0';
           if (stateIndex >= 0 && stateIndex < 16) {
             for (int i = 0; i < 3; i++) {
               digitalWrite(servopinno[i], pinArray[stateIndex][i] ? HIGH : LOW);
+              Lbuff[i] = pinArray[stateIndex][i] ? '1':'0';
             }
           }
         }
+        serialSend(0);
       }
     } else if (wIndex > 0 && rIndex > 0 && !iIndex) {
 

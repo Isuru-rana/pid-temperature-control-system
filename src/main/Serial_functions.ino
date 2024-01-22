@@ -65,8 +65,7 @@ void serialSend(int type) {
     digitalWrite(TX_ON_PIN, LOW);
   }
 
-if (type == 7) {
-
+  if (type == 7) {
     digitalWrite(TX_ON_PIN, HIGH);
     Serial.print("~");
     Serial.print(device_address);
@@ -74,4 +73,30 @@ if (type == 7) {
     else Serial.println("J002");
     digitalWrite(TX_ON_PIN, LOW);
   }
+  if (type == 8) {
+    digitalWrite(TX_ON_PIN, HIGH);
+    Serial.print("~");
+    Serial.print(device_address);
+    Serial.print("F");
+    Serial.println(valveVoltage);
+    digitalWrite(TX_ON_PIN, LOW);
+  }
+  if (type == 9) {
+    digitalWrite(TX_ON_PIN, HIGH);
+    Serial.print("~");
+    Serial.print(device_address);
+    Serial.print("D");
+    Serial.println(dcMotorVoltage);
+    digitalWrite(TX_ON_PIN, LOW);
+  }
+  if (type == 0) {
+    digitalWrite(TX_ON_PIN, HIGH);
+    Serial.print("~");
+    Serial.print(device_address);
+    Serial.print("L");
+    Serial.println(Lbuff);
+    digitalWrite(TX_ON_PIN, LOW);
+  }
 }
+
+
