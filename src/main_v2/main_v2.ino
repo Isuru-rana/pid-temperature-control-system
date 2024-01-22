@@ -50,10 +50,13 @@ v2.0.0            - System structure changed
 #include <PID_v1.h>
 #include <EEPROM.h>
 #include "MCP4725.h"
+#include "Thermistor.h"
 
 
 int device_address = 5;
 #define numControlUnits 4
+#define numMaxUnits 1
+#define numPtcUnits 3
 
 
 //===== Pins=======
@@ -66,6 +69,7 @@ int device_address = 5;
 #define AMBIENT_PIN 33
 
 int MAX_CS[numControlUnits] = { 22, 23, 24, 25 };  // MAX31855 module pins
+int thermistorPins[numPtcUnits] = {13, 15, 14};   // Thermistor analog pins
 
 #define heaterTimeout 5000
 #define serialTimeout 2000
@@ -123,10 +127,12 @@ bool pinArray[16][4] = {
   { 1, 1, 1, 0 },
   { 1, 1, 1, 1 }
 };
+
 int tempArrayInt[numControlUnits];
 float tempArray_p[numControlUnits];
-float setTempArray[4];
-int setTempArrayInt[4];
+float setTempArray[numControlUnits];
+int setTempArrayInt[numControlUnits];
+
 
 
 char Lbuff[4];
@@ -150,6 +156,7 @@ float Kd[numControlUnits] = { 0.02, 0.02, 0.02, 0.02 };  //Initial Differential 
 // == controllers Initialization ===
 PID *pidControl[numControlUnits];
 Adafruit_MAX31855 *sensor[numControlUnits];
+Thermistor thermistor[numPtcUnits];     // Thermistor
 Adafruit_SH1106 display(OLED_RESET);
 void initControles();
 
@@ -335,8 +342,12 @@ void tempControl() {
 
 void initControles() {
   for (int i = 0; i < numControlUnits; i++) {
+    if (i < numMaxUnits) {
     pidControl[i] = new PID(&temp[i], &OutErr[i], &Set[i], Kp[i], Ki[i], Kd[i], DIRECT);
     sensor[i] = new Adafruit_MAX31855(MAX_CS[i]);
+    } else {
+      pidControl[i] = new PID(&temp[i], &OutErr[i], &Set[i], Kp[i], Ki[i], Kd[i], DIRECT);
+      thermistor[i - numMaxUnits] = Thermistor(thermistorPins[i - numMaxUnits]);
   }
 }
 
