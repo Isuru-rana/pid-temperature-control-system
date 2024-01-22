@@ -26,7 +26,7 @@ void displayWriteData(int type) {
   if (type == 1) {
     int clearX = 15;
     int clearY = 10;
-    int clearWidth = 50;
+    int clearWidth = 54;
     int clearHeight = 65;
 
     for (int y = clearY; y < clearY + clearHeight; y++) {

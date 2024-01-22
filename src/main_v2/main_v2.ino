@@ -34,11 +34,9 @@ v1.4.0            - Changed serial communication protocol.
                       Added "D" parameter for setting DC voltages.
                       Minor bug fixes.
 
-v2.0.0            - System structure changed
+v2.0.0 + v2.1.0   - System structure changed
                       Heater MAX31855
                       Cooler, Peltier, Ambient captured with PTC
-
-
 */
 
 
@@ -69,7 +67,7 @@ int device_address = 5;
 #define AMBIENT_PIN 33
 
 int MAX_CS[numControlUnits] = { 22, 23, 24, 25 };  // MAX31855 module pins
-int thermistorPins[numPtcUnits] = {13, 15, 14};   // Thermistor analog pins
+int thermistorPins[numPtcUnits] = { 13, 15, 14 };  // Thermistor analog pins
 
 #define heaterTimeout 5000
 #define serialTimeout 2000
@@ -156,7 +154,7 @@ float Kd[numControlUnits] = { 0.02, 0.02, 0.02, 0.02 };  //Initial Differential 
 // == controllers Initialization ===
 PID *pidControl[numControlUnits];
 Adafruit_MAX31855 *sensor[numControlUnits];
-Thermistor thermistor[numPtcUnits];     // Thermistor
+Thermistor thermistor[numPtcUnits];  // Thermistor
 Adafruit_SH1106 display(OLED_RESET);
 void initControles();
 
@@ -236,17 +234,23 @@ void loop() {
   }
 
   for (int i = 0; i < numControlUnits; i++) {
-    temp[i] = sensor[i]->readCelsius();
+    if (i < numMaxUnits) {
+      temp[i] = sensor[i]->readCelsius();
+    } else {
+      temp[i] = thermistor[i - numMaxUnits].getValue();
+    }
     tempArrayInt[i] = int(temp[i]);
     Set[i] = setTempArray[i];
   }
 
   for (int i = 0; i < numControlUnits; i++) {
-    if (sensor[i]->readError()) {
-      senseError[i] = true;
-    } else {
-      senseError[i] = false;
-      pidControl[i]->Compute();
+    if (i < numMaxUnits) {
+      if (sensor[i]->readError()) {
+        senseError[i] = true;
+      } else {
+        senseError[i] = false;
+        pidControl[i]->Compute();
+      }
     }
 
     if (!senseError[i]) {
@@ -343,11 +347,12 @@ void tempControl() {
 void initControles() {
   for (int i = 0; i < numControlUnits; i++) {
     if (i < numMaxUnits) {
-    pidControl[i] = new PID(&temp[i], &OutErr[i], &Set[i], Kp[i], Ki[i], Kd[i], DIRECT);
-    sensor[i] = new Adafruit_MAX31855(MAX_CS[i]);
+      pidControl[i] = new PID(&temp[i], &OutErr[i], &Set[i], Kp[i], Ki[i], Kd[i], DIRECT);
+      sensor[i] = new Adafruit_MAX31855(MAX_CS[i]);
     } else {
       pidControl[i] = new PID(&temp[i], &OutErr[i], &Set[i], Kp[i], Ki[i], Kd[i], DIRECT);
       thermistor[i - numMaxUnits] = Thermistor(thermistorPins[i - numMaxUnits]);
+    }
   }
 }
 
@@ -361,8 +366,6 @@ void serialSync() {
   }
   displayWriteData(0);
 }
-float valveVoltage = 0;
-float dcMotorVoltage = 0;
 
 void setValveVoltage(int device) {
   if (device == 1) MCP3.setVoltage(valveVoltage);
