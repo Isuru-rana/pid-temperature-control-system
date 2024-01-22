@@ -105,7 +105,7 @@ void parseCommand(String command) {
         if (isdigit(lVal)) {
           int stateIndex = lVal - '0';
           if (stateIndex >= 0 && stateIndex < 16) {
-            for (int i = 0; i < 3; i++) {
+            for (int i = 0; i < 4; i++) {
               digitalWrite(servopinno[i], pinArray[stateIndex][i] ? HIGH : LOW);
               Lbuff[i] = pinArray[stateIndex][i] ? '1':'0';
             }
