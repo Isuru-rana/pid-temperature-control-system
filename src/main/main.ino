@@ -1,4 +1,4 @@
-/* ---------- Temperature Control System v1.4.0 ------------
+/* ---------- Temperature Control System v1.5.0 ------------
 
 v1.1 - 01/20/24 - Changed the serial response value from float to int.
                   Fixed a bug in the PID.
@@ -33,6 +33,9 @@ v1.4.0            - Changed serial communication protocol.
                       Added "F" parameter to set voltages.
                       Added "D" parameter for setting DC voltages.
                       Minor bug fixes.
+
+v1.5.0 - 01/24/24 - Fix bugs. Display optimization
+                    PID controller bug fixed
 
 v2.0.0            - System structure changed
                       Heater MAX31855
@@ -84,11 +87,9 @@ int servopinno[4] = { servopinno0, servopinno1, servopinno2, servopinno3 };
 // ====== System Flags =======
 bool systemPower = false;
 bool serialConState = false;
-bool coolerPower = true;
 bool heaterPower = 0;
-
 bool heatSafeT = 0;
-
+bool coolerPower = 0;
 bool peltierPower = false;
 bool ambientPower = false;
 
@@ -166,7 +167,6 @@ void parseCommand(String command);
 void serialSync();
 
 
-
 void setup() {
   Serial.begin(9600);
   initControles();
@@ -176,12 +176,12 @@ void setup() {
   ReadEEPROM();
   displayWriteData(0);
 
-  const int sampleRate = 1;
+  const int sampleRate = 5;
 
   for (int i = 0; i < numControlUnits; i++) {
     pidControl[i]->SetMode(AUTOMATIC);
+    pidControl[i]->SetOutputLimits(-255, 255);
     pidControl[i]->SetSampleTime(sampleRate);
-    Set[i] = setTempArray[i];
   }
 
   Wire.begin();
@@ -213,8 +213,6 @@ void loop() {
     heaterTimer = 0;
     heaterPower = 0;
   } else if (heatSafeT) heaterPower = 1;
-
-  //if ((millis() - serialTimer > serialTimeout) && systemPower) serialSync();
 
   static String receivedCommand = "";
 
@@ -252,7 +250,7 @@ void loop() {
   //tempArrayInt[0] += 200;
   displayWriteData(1);
   tempControl();
-  delay(250);
+  delay(500);
 }
 
 
@@ -269,8 +267,11 @@ void tempControl() {
     floatOutErr[i] = static_cast<float>(OutErr[i]);
     absOutErr[i] = fabs(floatOutErr[i]);
     coolOrHeat[i] = (temp[i] > Set[i]) ? 0 : 1;
-    coolOrHeatPower[i] = map(absOutErr[i], pidMinValue[i], pidMaxValue[i], coolOrHeatPowerMin[i], coolOrHeatPowerMax[i]);
-
+    if (i == 1) {
+      coolOrHeatPower[i] = map(absOutErr[i], pidMinValue[i], pidMaxValue[i], coolOrHeatPowerMin[i], coolOrHeatPowerMax[i]);
+    } else {
+      coolOrHeatPower[i] = map(absOutErr[i], pidMinValue[i], pidMaxValue[i], coolOrHeatPowerMin[i], coolOrHeatPowerMax[i]);
+    }
     if (systemPower) {
       if (heaterPower) {
         if (coolOrHeat[0] == 1) {
@@ -335,7 +336,11 @@ void tempControl() {
 
 void initControles() {
   for (int i = 0; i < numControlUnits; i++) {
-    pidControl[i] = new PID(&temp[i], &OutErr[i], &Set[i], Kp[i], Ki[i], Kd[i], DIRECT);
+    if (i == 1) {
+      pidControl[i] = new PID(&temp[i], &OutErr[i], &Set[i], Kp[i], Ki[i], Kd[i], REVERSE);
+    } else {
+      pidControl[i] = new PID(&temp[i], &OutErr[i], &Set[i], Kp[i], Ki[i], Kd[i], DIRECT);
+    }
     sensor[i] = new Adafruit_MAX31855(MAX_CS[i]);
   }
 }
@@ -350,8 +355,6 @@ void serialSync() {
   }
   displayWriteData(0);
 }
-float valveVoltage = 0;
-float dcMotorVoltage = 0;
 
 void setValveVoltage(int device) {
   if (device == 1) MCP3.setVoltage(valveVoltage);

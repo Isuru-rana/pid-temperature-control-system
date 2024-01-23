@@ -67,10 +67,12 @@ void parseCommand(String command) {
         if (jVal == '1') {
           if (!systemPower) {
             serialSend(2);
+            digitalWrite(HEATER_Heat_PIN, HIGH);
             serialConState = true;
           } else {
             systemPower = false;
             serialSend(2);
+            digitalWrite(HEATER_Heat_PIN, LOW);
             serialConState = false;
             serialSync();
           }
@@ -120,6 +122,7 @@ void parseCommand(String command) {
       } else {
         device_address = command.substring(wIndex + 1, rIndex).toInt();
         EEPROM.put(eepromAddress[1] * sizeof(int), device_address);
+        displayWriteData(2);
         serialSend(5);
       }
     } else if (systemPower && (iIndex > 0 && rIndex > 0 && !wIndex)) {

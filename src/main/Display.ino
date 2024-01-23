@@ -6,8 +6,8 @@ void displayInit() {
   display.print("Address:");
   display.setCursor(55, 0);
   display.print(device_address);
-  display.setCursor(90, 0);
-  display.print("Set");
+  display.setCursor(70, 0);
+  display.print("Timer:");
   display.drawLine(70, 10, 70, SCREEN_HEIGHT, WHITE);
   display.setCursor(5, 10);
   display.print("H:");
@@ -18,6 +18,7 @@ void displayInit() {
   display.setCursor(5, 55);
   display.print("A:");
   display.display();
+  displayWriteData(3);
 }
 
 
@@ -59,23 +60,61 @@ void displayWriteData(int type) {
       if (i == 0) {
         display.setCursor(floatAlignRight(type, setTempArray[i]) + 15, displayVPos[i]);
         display.print(setTempArrayInt[i]);
-      } else if (i == 1) {
+      }
+      if (i == 1) {
         if (!coolerPower) {
           display.setCursor(100, displayVPos[i]);
           display.print("OFF");
         } else {
           display.print(setTempArray[i]);
         }
-      } else if (i == 2) {
+      }
+      if (i == 2) {
         if (!peltierPower) {
           display.setCursor(100, displayVPos[i]);
           display.print("OFF");
         } else {
           display.print(setTempArray[i]);
         }
-      } else {
-        display.print(setTempArray[i]);
       }
+      if (i == 3) {
+        if (!ambientPower) {
+          display.setCursor(100, displayVPos[i]);
+          display.print("OFF");
+        } else {
+          display.print(setTempArray[i]);
+        }
+      }
+    }
+  } else if (type == 2) {
+    int clearX = 54;
+    int clearY = 0;
+    int clearWidth = 15;
+    int clearHeight = 10;
+
+    for (int y = clearY; y < clearY + clearHeight; y++) {
+      for (int x = clearX; x < clearX + clearWidth; x++) {
+        display.drawPixel(x, y, BLACK);
+      }
+    }
+    display.setCursor(55, 0);
+    display.print(device_address);
+  } else if (type == 3) {
+    int clearX = 104;
+    int clearY = 10;
+    int clearWidth = 20;
+    int clearHeight = 10;
+
+    for (int y = clearY; y < clearY + clearHeight; y++) {
+      for (int x = clearX; x < clearX + clearWidth; x++) {
+        display.drawPixel(x, y, BLACK);
+      }
+    }
+    display.setCursor(105, 0);
+    if (heatSafeT) {
+      display.print("ON");
+    } else {
+      display.print("OFF");
     }
   }
   display.display();
@@ -92,7 +131,7 @@ int floatAlignRight(int place, int num) {
   else if (num < 10.00 && num >= 0.00) space = 43;
   else if (num > -10.00 && num < 0.00) space = 43;
   else if (num < -9.00 && num > -100.00) space = 31;
-  else if (num < -99.00 && num > -1000.00) space = 31;
+  else if (num < -99.00 && num > -1000.00) space = 25;
   else if (num < -999.00) space = 20;
   for (uint8_t s = 0; s < space; s++) spaces++;
   return spaces;
