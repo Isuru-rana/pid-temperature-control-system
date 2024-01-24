@@ -1,9 +1,9 @@
-/* ---------- Temperature Control System v1.5.1 ------------
+/* ---------- Temperature Control System v1.6.0 ------------
 
 v1.1 - 01/20/24 - Changed the serial response value from float to int.
                   Fixed a bug in the PID.
 
-v1.1.1 - 01/20/24 - Added Power Off state to the system.
+v1.1.1 - 01/20/24 - Added a Power Off state to the system.
                     Cleared all temperature setpoints.
                     Turned off all I/O pins.
                     Removed setpoint values from EEPROM.
@@ -18,33 +18,37 @@ v1.1.3 - 01/21/24 - Fixed a bug related to EEPROM.
 v1.1.5            - Fixed a bug.
 
 v1.2.0 + 1.2.1    - Changed the serial communication protocol.
-                      Fixed bugs in serial and PID loops.
+                    Fixed bugs in serial and PID loops.
 
 v1.2.2            - Improved code (Display).
 
 v1.3.0 - 01/22/24 - Changed serial communication protocol.
-                      Added "L" parameter to switch servopin 0, 1, 2.
+                    Added "L" parameter to switch servopin 0, 1, 2.
 
 v1.3.1            - Added another pin for the "L" parameter.
                     Added J2 pin.
                     Changed "P00" to display as "OFF."
 
 v1.4.0            - Changed serial communication protocol.
-                      Added "F" parameter to set voltages.
-                      Added "D" parameter for setting DC voltages.
-                      Minor bug fixes.
+                    Added "F" parameter to set voltages.
+                    Added "D" parameter for setting DC voltages.
+                    Minor bug fixes.
 
-v1.5.0 - 01/24/24 - Fix bugs. Display optimization
-                    PID controller bug fixed
+v1.5.0 - 01/24/24 - Fixed bugs. Display optimization.
+                    Fixed PID controller bug.
 
-v1.5.1 - 01/24/24 - Fixed power out values
+v1.5.1 - 01/24/24 - Fixed power out values.
 
-v2.0.0            - System structure changed
-                      Heater MAX31855
-                      Cooler, Peltier, Ambient captured with PTC
+v1.6.0 - 01/25/24 - Power PIN 29 and pin 28 issue fixed.
+                    Serial response OFF value set to "0" from "00."
+                    Cooler DAC voltage set to 2.7 - 5.0v.
+                    Added two H and P pins to indicate direction on Peltier and ambient readings.
 
-
+v2.0.0            - System structure changed.
+                    Heater MAX31855.
+                    Cooler, Peltier, Ambient captured with PTC.
 */
+
 
 
 
@@ -67,8 +71,12 @@ int device_address = 5;
 #define HEATER_Heat_PIN 29   //  /J101 Heater Power on pin  /5J101R
 #define HEATER_PWM_PIN 2
 #define COOLER_PIN 31  // note: Cooler is controlled by MPC1 (0x60)
-#define PELTIER_PIN 32
-#define AMBIENT_PIN 33
+#define PELTIER_PIN_C 32
+#define PELTIER_PIN_H 36
+#define PELTIER_PIN_PWM 36
+#define AMBIENT_PIN_C 34
+#define AMBIENT_PIN_H 35
+#define AMBIENT_PIN_PWM 33
 
 int MAX_CS[numControlUnits] = { 22, 23, 24, 25 };  // MAX31855 module pins
 
@@ -200,8 +208,12 @@ void setup() {
   pinMode(HEATER_PWM_PIN, OUTPUT);
   pinMode(HEATER_Heat_PIN, OUTPUT);
   pinMode(COOLER_PIN, OUTPUT);
-  pinMode(PELTIER_PIN, OUTPUT);
-  pinMode(AMBIENT_PIN, OUTPUT);
+  pinMode(PELTIER_PIN_C, OUTPUT);
+  pinMode(PELTIER_PIN_H, OUTPUT);
+  pinMode(PELTIER_PIN_PWM, OUTPUT);
+  pinMode(AMBIENT_PIN_PWM, OUTPUT);
+  pinMode(AMBIENT_PIN_C, OUTPUT);
+  pinMode(AMBIENT_PIN_H, OUTPUT);
   pinMode(servopinno0, OUTPUT);
   pinMode(servopinno1, OUTPUT);
   pinMode(servopinno2, OUTPUT);
@@ -259,17 +271,25 @@ void loop() {
 float floatOutErr[numControlUnits];
 float absOutErr[numControlUnits];
 bool coolOrHeat[numControlUnits];  // 1 == cool; 0 == heat
+
 float coolOrHeatPower[numControlUnits];
 float normalizedValue[numControlUnits];
-float coolOrHeatPowerMin[numControlUnits] = { 0.00, 0.00, 0.00, 0.00 };
-float coolOrHeatPowerMax[numControlUnits] = { 255.00, mcpMaxVoltage[0], mcpMaxVoltage[1], mcpMaxVoltage[2] };
+float coolOrHeatPowerMin[numControlUnits] = { 0.00, 2.70, 0.00, 0.00 };
+float coolOrHeatPowerMax[numControlUnits] = { 255.00, mcpMaxVoltage[0], 255.0, 255.00 };
 
+bool statusPinState_H[2];
+bool statusPinState_C[2];
+float sensitivity[2] = { 0.5, 0.5 };
 
 void tempControl() {
   for (int i = 0; i < numControlUnits; i++) {
     floatOutErr[i] = static_cast<float>(OutErr[i]);
     absOutErr[i] = fabs(floatOutErr[i]);
     coolOrHeat[i] = (temp[i] > Set[i]) ? 0 : 1;
+    if (i > 1) {
+      statusPinState_C[i - 2] = (temp[i - 2] > Set[i - 2] + sensitivity[i - 2]);
+      statusPinState_H[i - 2] = (temp[i - 2] < Set[i - 2] - sensitivity[i - 2]);
+    }
     normalizedValue[i] = (floatOutErr[i] - pidMinValue[i]) / (pidMaxValue[i] - pidMinValue[i]);
     coolOrHeatPower[i] = coolOrHeatPowerMin[i] + normalizedValue[i] * (coolOrHeatPowerMax[i] - coolOrHeatPowerMin[i]);
     if (systemPower) {
@@ -300,34 +320,49 @@ void tempControl() {
       }
 
       if (peltierPower) {
-        MCP2.setVoltage(coolOrHeatPower[2]);
-        if (coolOrHeat[2] == 0) {
-          digitalWrite(PELTIER_PIN, HIGH);
-        } else {
-          digitalWrite(PELTIER_PIN, LOW);
-        }
+        //MCP2.setVoltage(coolOrHeatPower[2]);
+        analogWrite(PELTIER_PIN_PWM, coolOrHeatPower[2]);
+        if (statusPinState_C[0] == 1) {
+          digitalWrite(PELTIER_PIN_C, HIGH);
+        } else digitalWrite(PELTIER_PIN_C, LOW);
+
+        if (statusPinState_H[0] == 1) {
+          digitalWrite(PELTIER_PIN_H, HIGH);
+        } else digitalWrite(PELTIER_PIN_H, LOW);
+
       } else {
         MCP2.setVoltage(0);
-        digitalWrite(PELTIER_PIN, LOW);
+        digitalWrite(PELTIER_PIN_C, LOW);
+        digitalWrite(PELTIER_PIN_H, LOW);
       }
 
       if (ambientPower) {
-        //MCP3.setVoltage(coolOrHeatPower[3]);
-        if (coolOrHeat[3] == 1) {
-          digitalWrite(AMBIENT_PIN, HIGH);
+        analogWrite(AMBIENT_PIN_PWM, coolOrHeatPower[3]);
+        if (statusPinState_C[1] == 1) {
+          digitalWrite(AMBIENT_PIN_C, HIGH);
         } else {
-          digitalWrite(AMBIENT_PIN, LOW);
+          digitalWrite(AMBIENT_PIN_C, LOW);
+        }
+        if (statusPinState_H[1] == 1) {
+          digitalWrite(AMBIENT_PIN_H, HIGH);
+        } else {
+          digitalWrite(AMBIENT_PIN_H, LOW);
         }
       } else {
-        digitalWrite(AMBIENT_PIN, LOW);
+        digitalWrite(AMBIENT_PIN_C, LOW);
+        digitalWrite(AMBIENT_PIN_H, LOW);
       }
     } else {
       digitalWrite(POWER_ON_PIN, systemPower);
       digitalWrite(HEATER_PWM_PIN, LOW);
       digitalWrite(HEATER_Heat_PIN, LOW);
       digitalWrite(COOLER_PIN, LOW);
-      digitalWrite(PELTIER_PIN, LOW);
-      digitalWrite(AMBIENT_PIN, LOW);
+      digitalWrite(PELTIER_PIN_C, LOW);
+      digitalWrite(PELTIER_PIN_H, LOW);
+      digitalWrite(PELTIER_PIN_PWM, 0);
+      digitalWrite(AMBIENT_PIN_C, LOW);
+      digitalWrite(AMBIENT_PIN_H, LOW);
+      digitalWrite(AMBIENT_PIN_PWM, 0);
       MCP1.setVoltage(0);
       MCP2.setVoltage(0);
     }

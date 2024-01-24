@@ -23,28 +23,28 @@ void parseCommand(String command) {
         String pBuff = command.substring(pIndex, pIndex + 2);
         String aBuff = command.substring(aIndex, aIndex + 2);
 
-        if (cBuff == ("00")) {
+        if (cIndex >0 && cBuff == ("00")) {
           coolerPower = false;
           setTempArray[1] = 0;
         } else {
           coolerPower = true;
           setTempArray[1] = cIndex > 0 ? command.substring(cIndex, (pIndex > 0 ? pIndex : aIndex) > 0 ? (pIndex > 0 ? pIndex : aIndex) : rIndex).toInt() : setTempArray[1];
         }
-        if (hBuff == ("00")) {
+        if (hIndex > 0 && hBuff == ("00")) {
           heaterPower = false;
           setTempArray[0] = 0;
         } else {
           heaterPower = true;
           setTempArray[0] = hIndex > 0 ? command.substring(hIndex, (cIndex > 0 ? cIndex : (pIndex > 0 ? pIndex : (aIndex > 0 ? aIndex : rIndex)))).toInt() : setTempArray[0];
         }
-        if (pBuff == ("00")) {
+        if (pIndex > 0 && pBuff == ("00")) {
           peltierPower = false;
           setTempArray[2] = 0;
         } else {
           peltierPower = true;
           setTempArray[2] = pIndex > 0 ? command.substring(pIndex, aIndex > 0 ? aIndex : rIndex).toInt() : setTempArray[2];
         }
-        if (aBuff == ("00")) {
+        if (aIndex > 0 && aBuff == ("00")) {
           ambientPower = false;
           setTempArray[3] = 0;
         } else {
@@ -67,12 +67,13 @@ void parseCommand(String command) {
         if (jVal == '1') {
           if (!systemPower) {
             serialSend(2);
-            digitalWrite(HEATER_Heat_PIN, HIGH);
+            digitalWrite(POWER_ON_PIN, HIGH);
+            systemPower = true;
             serialConState = true;
           } else {
             systemPower = false;
             serialSend(2);
-            digitalWrite(HEATER_Heat_PIN, LOW);
+            digitalWrite(POWER_ON_PIN, LOW);
             serialConState = false;
             serialSync();
           }
@@ -86,9 +87,11 @@ void parseCommand(String command) {
             J2 = 0;
           }
         } else if (serialConState && jVal == '5') {
-          serialTimer = millis();
-          systemPower = true;
-          digitalWrite(POWER_ON_PIN, systemPower);
+          //serialTimer = millis();
+          heaterPower = 1;
+          setTempArray[0] = 0;
+          displayWriteData(0);
+          digitalWrite(HEATER_Heat_PIN, heaterPower);
 
           serialSend(3);
         }
@@ -102,14 +105,14 @@ void parseCommand(String command) {
         dcMotorVoltage = fStr.toInt() / 1000.0;
         setValveVoltage(2);
         serialSend(9);
-      }else if (systemPower && (lIndex > 0 && rIndex > 0)) {
+      } else if (systemPower && (lIndex > 0 && rIndex > 0)) {
         char lVal = command.charAt(lIndex);
         if (isdigit(lVal)) {
           int stateIndex = lVal - '0';
           if (stateIndex >= 0 && stateIndex < 16) {
             for (int i = 0; i < 4; i++) {
               digitalWrite(servopinno[i], pinArray[stateIndex][i] ? HIGH : LOW);
-              Lbuff[i] = pinArray[stateIndex][i] ? '1':'0';
+              Lbuff[i] = pinArray[stateIndex][i] ? '1' : '0';
             }
           }
         }
@@ -129,11 +132,13 @@ void parseCommand(String command) {
 
       if (command.substring(iIndex + 1, rIndex).equals("1")) {
         heatSafeT = 1;
+        displayWriteData(3);
         EEPROM.put(eepromAddress[7] * sizeof(bool), heatSafeT);
         heaterTimer = millis();
         serialSend(6);
       } else if (command.substring(iIndex + 1, rIndex).equals("0")) {
         heatSafeT = 0;
+        displayWriteData(3);
         EEPROM.put(eepromAddress[7] * sizeof(bool), heatSafeT);
         serialSend(6);
       }
