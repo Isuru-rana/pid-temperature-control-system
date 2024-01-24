@@ -1,4 +1,4 @@
-/* ---------- Temperature Control System v1.5.0 ------------
+/* ---------- Temperature Control System v1.5.1 ------------
 
 v1.1 - 01/20/24 - Changed the serial response value from float to int.
                   Fixed a bug in the PID.
@@ -36,6 +36,8 @@ v1.4.0            - Changed serial communication protocol.
 
 v1.5.0 - 01/24/24 - Fix bugs. Display optimization
                     PID controller bug fixed
+
+v1.5.1 - 01/24/24 - Fixed power out values
 
 v2.0.0            - System structure changed
                       Heater MAX31855
@@ -137,8 +139,8 @@ unsigned long serialTimer;
 
 //==== PID config ======
 
-float pidMinValue[numControlUnits] = { 0, 0, 0, 0 };
-float pidMaxValue[numControlUnits] = { 255, 255, 255, 255 };
+float pidMinValue[numControlUnits] = { 0.00, 0.00, 0.00, 0.00 };
+float pidMaxValue[numControlUnits] = { 255.00, 255.00, 255.00, 255.00 };
 
 double Set[numControlUnits];
 double temp[numControlUnits];
@@ -158,7 +160,7 @@ MCP4725 MCP1(0x60);  //ADDR open
 MCP4725 MCP2(0x61);  //ADDR to GND
 MCP4725 MCP3(0x64);  //Variable voltage out
 MCP4725 MCP4(0x65);  //DC moto controller
-float mcpMaxVoltage[4] = { 5.1, 5.1, 5.1, 5.1 };
+float mcpMaxVoltage[4] = { 5.10, 5.10, 5.10, 5.10 };
 
 uint8_t selectPin[4] = { 50, 51, 52, 53 };
 
@@ -257,9 +259,10 @@ void loop() {
 float floatOutErr[numControlUnits];
 float absOutErr[numControlUnits];
 bool coolOrHeat[numControlUnits];  // 1 == cool; 0 == heat
-int coolOrHeatPower[numControlUnits];
-float coolOrHeatPowerMin[numControlUnits] = { 0, 0, 0, 0 };
-float coolOrHeatPowerMax[numControlUnits] = { 255, mcpMaxVoltage[0], mcpMaxVoltage[1], mcpMaxVoltage[2] };
+float coolOrHeatPower[numControlUnits];
+float normalizedValue[numControlUnits];
+float coolOrHeatPowerMin[numControlUnits] = { 0.00, 0.00, 0.00, 0.00 };
+float coolOrHeatPowerMax[numControlUnits] = { 255.00, mcpMaxVoltage[0], mcpMaxVoltage[1], mcpMaxVoltage[2] };
 
 
 void tempControl() {
@@ -267,11 +270,8 @@ void tempControl() {
     floatOutErr[i] = static_cast<float>(OutErr[i]);
     absOutErr[i] = fabs(floatOutErr[i]);
     coolOrHeat[i] = (temp[i] > Set[i]) ? 0 : 1;
-    if (i == 1) {
-      coolOrHeatPower[i] = map(absOutErr[i], pidMinValue[i], pidMaxValue[i], coolOrHeatPowerMin[i], coolOrHeatPowerMax[i]);
-    } else {
-      coolOrHeatPower[i] = map(absOutErr[i], pidMinValue[i], pidMaxValue[i], coolOrHeatPowerMin[i], coolOrHeatPowerMax[i]);
-    }
+    normalizedValue[i] = (floatOutErr[i] - pidMinValue[i]) / (pidMaxValue[i] - pidMinValue[i]);
+    coolOrHeatPower[i] = coolOrHeatPowerMin[i] + normalizedValue[i] * (coolOrHeatPowerMax[i] - coolOrHeatPowerMin[i]);
     if (systemPower) {
       if (heaterPower) {
         if (coolOrHeat[0] == 1) {
